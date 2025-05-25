@@ -1,103 +1,143 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import axios from "axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+const apiKey = process.env.NEXT_PUBLIC_REDTRACK_API_KEY;
+
+interface Campaign {
+  id: number;
+  title: string;
+  stat: {
+    profit: number;
+    cost: number;
+    total_revenue: number;
+    convtype2: number;
+    convtype1: number;
+    type1_cpa: number;
+    type1_cr: number;
+    type1_roi: number;
+    convtype3: number;
+    clicks: number;
+    epc: number;
+    prelp_clicks: number;
+    prelp_clicks_ctr: number;
+    lp_views: number;
+    lp_clicks: number;
+  };
+}
+
+export default function HomePage() {
+  const [data, setData] = useState<Campaign[]>([]);
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const redRow = "#d59e91";
+  const greenRow = "#d5ecc5";
+
+  const fetchData = async (from: Date, to: Date) => {
+    const dateFrom = from.toISOString().split('T')[0];
+    const dateTo = to.toISOString().split('T')[0];
+    const url = `https://app.redtrack.io/api/campaigns?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&status=1&with_clicks=false&page=1&per=100&sortby=clicks&direction=desc&timezone=America%2FNew_York&total=true`;
+    
+    try {
+      const res = await axios.get(url);
+      setData(res.data.items || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(startDate, endDate);
+  }, [startDate, endDate]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <main className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Campaigns</h1>
+      
+      <div className="mb-4 flex gap-4 items-center">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">From:</label>
+          <DatePicker
+            selected={startDate}
+            onChange={(date: Date | null) => date && setStartDate(date)}
+            className="border rounded px-3 py-2"
+            dateFormat="yyyy-MM-dd"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
+          <DatePicker
+            selected={endDate}
+            onChange={(date: Date | null) => date && setEndDate(date)}
+            className="border rounded px-3 py-2"
+            dateFormat="yyyy-MM-dd"
+            minDate={startDate}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-200">
+          <thead>
+            <tr className="bg-gray-100 text-left">
+              <th className="px-4 py-2">Title</th>
+              <th className="px-4 py-2">Cost</th>
+              <th className="px-4 py-2">Total Revenue</th>
+              <th className="px-4 py-2">Profit</th>
+              <th className="px-4 py-2">InitiateCheckout</th>
+              <th className="px-4 py-2">Purchase</th>
+              <th className="px-4 py-2">Purchase CPA</th>
+              <th className="px-4 py-2">Purchase CR</th>
+              <th className="px-4 py-2">Purchase ROI</th>
+              <th className="px-4 py-2">Upsell</th>
+              <th className="px-4 py-2">Clicks</th>
+              <th className="px-4 py-2">EPC</th>
+              <th className="px-4 py-2">Pre-LP Clicks</th>
+              <th className="px-4 py-2">Pre-LP Click CTR</th>
+              <th className="px-4 py-2">LP Views</th>
+              <th className="px-4 py-2">LP Clicks</th>
+              <th className="px-4 py-2">Report</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item) => {
+              const profit = item.stat.profit;
+              const rowColor = profit < -60 ? redRow : greenRow;
+              const dateFrom = new Date(startDate).toISOString().split('T')[0];
+              const dateTo = new Date(endDate).toISOString().split('T')[0];
+              return (
+                <tr key={item.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600" style={{ backgroundColor: rowColor }}>
+                  <td className="px-4 py-2">{item.title}</td>
+                  <td className="px-4 py-2">{item.stat.cost}</td>
+                  <td className="px-4 py-2">{item.stat.total_revenue}</td>
+                  <td className="px-4 py-2">{profit}</td>
+                  <td className="px-4 py-2">{item.stat.convtype2}</td>
+                  <td className="px-4 py-2">{item.stat.convtype1}</td>
+                  <td className="px-4 py-2">{item.stat.type1_cpa}</td>
+                  <td className="px-4 py-2">{item.stat.type1_cr}</td>
+                  <td className="px-4 py-2">{item.stat.type1_roi}</td>
+                  <td className="px-4 py-2">{item.stat.convtype3}</td>
+                  <td className="px-4 py-2">{item.stat.clicks}</td>
+                  <td className="px-4 py-2">{item.stat.epc}</td>
+                  <td className="px-4 py-2">{item.stat.prelp_clicks}</td>
+                  <td className="px-4 py-2">{item.stat.prelp_clicks_ctr}</td>
+                  <td className="px-4 py-2">{item.stat.lp_views}</td>
+                  <td className="px-4 py-2">{item.stat.lp_clicks}</td>
+                  <td className="px-4 py-2">
+                    <Link href={`/campaigns/${item.id}?datefrom=${dateFrom}&dateto=${dateTo}`} className="text-blue-600 underline">
+                      Report
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </main>
   );
 }
