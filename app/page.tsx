@@ -41,7 +41,7 @@ export default function HomePage() {
     const dateFrom = from.toISOString().split('T')[0];
     const dateTo = to.toISOString().split('T')[0];
     const url = `https://app.redtrack.io/api/campaigns?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&status=1&with_clicks=false&page=1&per=100&sortby=clicks&direction=desc&timezone=America%2FNew_York&total=true`;
-    
+
     try {
       const res = await axios.get(url);
       setData(res.data.items || []);
@@ -107,8 +107,6 @@ export default function HomePage() {
             {data.map((item) => {
               const profit = item.stat.profit;
               const rowColor = profit < -60 ? redRow : greenRow;
-              const dateFrom = new Date(startDate).toISOString().split('T')[0];
-              const dateTo = new Date(endDate).toISOString().split('T')[0];
               return (
                 <tr key={item.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600" style={{ backgroundColor: rowColor }}>
                   <td className="px-4 py-2">{item.title}</td>
@@ -128,7 +126,7 @@ export default function HomePage() {
                   <td className="px-4 py-2">{item.stat.lp_views}</td>
                   <td className="px-4 py-2">{item.stat.lp_clicks}</td>
                   <td className="px-4 py-2">
-                    <Link href={`/campaigns/${item.id}?datefrom=${dateFrom}&dateto=${dateTo}`} className="text-blue-600 underline">
+                    <Link href={`/campaigns/${item.id}`} className="text-blue-600 underline">
                       Report
                     </Link>
                   </td>

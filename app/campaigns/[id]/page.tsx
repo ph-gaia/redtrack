@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 
 interface Detail {
@@ -29,45 +31,47 @@ interface StatusRecord {
 
 const DetailTable: React.FC = () => {
   const [detailData, setDetailData] = useState<Detail[]>([]);
+  const [totalData, setTotalData] = useState<Detail>({} as Detail);
   const [statusMap, setStatusMap] = useState<{ [sub7: number]: boolean }>({});
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
 
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const formatarData = (data: Date) => data.toISOString().split("T")[0];
   const params = useParams();
-  const searchParams = useSearchParams();
   const campaignId = params.id as string;
-  const dateFrom = searchParams.get('datefrom') || formatarData(yesterday);
-  const dateTo = searchParams.get('dateto') || formatarData(today);
+  const dateFrom = startDate.toISOString().split('T')[0];
+  const dateTo = endDate.toISOString().split('T')[0];
+  const redRow = "#d59e91";
+  const greenRow = "#d5ecc5";
+
+  const fetchDetails = async () => {
+    const apiKey = process.env.NEXT_PUBLIC_REDTRACK_API_KEY;
+
+    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=asc&group=sub7,sub4&sortby=profit&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
+
+    const response = await axios.get(detailUrl);
+    const data = response.data.items;
+    setTotalData(response.data.total);
+    setDetailData(data);
+
+    // Load localStorage
+    const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
+    const currentCampaign = local[campaignId] || {};
+    const map: { [sub7: number]: boolean } = {};
+
+    data.forEach((d: Detail) => {
+      map[d.sub7] = currentCampaign[d.sub7] !== 0;
+    });
+
+    setStatusMap(map);
+  };
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      const apiKey = process.env.NEXT_PUBLIC_REDTRACK_API_KEY;
-
-      const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=asc&group=sub7,sub4&sortby=profit&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
-
-      const response = await axios.get(detailUrl);
-      const data = response.data.items;
-      setDetailData(data);
-
-      // Load localStorage
-      const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
-      const currentCampaign = local[campaignId] || {};
-      const map: { [sub7: number]: boolean } = {};
-
-      data.forEach((d: Detail) => {
-        map[d.sub7] = currentCampaign[d.sub7] !== 0;
-      });
-
-      setStatusMap(map);
-    };
-
     fetchDetails();
-  }, [campaignId, dateFrom, dateTo]);
+  }, [campaignId]);
 
   const toggleStatus = (sub7: number) => {
-    const updated = { ...statusMap, [sub7]: !statusMap[sub7] };
+    const updated = { ...statusMap };
+    updated[sub7] = !statusMap[sub7];
     setStatusMap(updated);
 
     const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
@@ -79,44 +83,92 @@ const DetailTable: React.FC = () => {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">Campaign Detail</h1>
+      <div className="mb-4 flex gap-4 items-center">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">From:</label>
+          <DatePicker
+            selected={startDate}
+            onChange={(date: Date | null) => date && setStartDate(date)}
+            className="border rounded px-3 py-2"
+            dateFormat="yyyy-MM-dd"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
+          <DatePicker
+            selected={endDate}
+            onChange={(date: Date | null) => date && setEndDate(date)}
+            className="border rounded px-3 py-2"
+            dateFormat="yyyy-MM-dd"
+            minDate={startDate}
+          />
+        </div>
+        <div className="mr-4">
+          <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => fetchDetails()}>
+            Aplicar
+          </button>
+        </div>
+        <div className="ml-auto">
+          <button className="bg-yellow-500 text-white px-4 py-2" onClick={() => window.location.href = '/'}>
+            Voltar
+          </button>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full table-auto border-collapse border border-gray-300">
           <thead className="bg-gray-100">
             <tr>
               {[
-                "Date", "Sub7", "Sub4", "Pre-LP Click CTR", "Cost", "Total Revenue", "Profit",
+                "Sub7", "Sub4", "Pre-LP Click CTR", "Cost", "Total Revenue", "Profit",
                 "InitiateCheckout", "Purchase", "Purchase CPA", "LP Clicks", "Upsell", "Clicks", "EPC", "Status"
               ].map((header) => (
                 <th key={header} className="border p-2 text-sm text-left">{header}</th>
               ))}
             </tr>
+            <tr>
+              <th colSpan={2} className="border p-2 text-sm text-left">Total</th>
+              <th className="border p-2 text-sm text-left">{totalData.prelp_clicks_ctr*100}%</th>
+              <th className="border p-2 text-sm text-left">$ {totalData.cost}</th>
+              <th className="border p-2 text-sm text-left">$ {totalData.total_revenue}</th>
+              <th className="border p-2 text-sm text-left">$ {totalData.profit}</th>
+              <th className="border p-2 text-sm text-left">{totalData.convtype2}</th>
+              <th className="border p-2 text-sm text-left">{totalData.convtype1}</th>
+              <th className="border p-2 text-sm text-left">$ {totalData.type1_cpa}</th>
+              <th className="border p-2 text-sm text-left">{totalData.lp_clicks}</th>
+              <th className="border p-2 text-sm text-left">{totalData.convtype3}</th>
+              <th className="border p-2 text-sm text-left">{totalData.clicks}</th>
+              <th colSpan={2} className="border p-2 text-sm text-left">$ {totalData.epc}</th>
+            </tr>
           </thead>
           <tbody>
-            {detailData.map((detail) => (
-              <tr key={detail.sub7} className="border-b">
-                <td className="border p-2 text-sm">{detail.date}</td>
-                <td className="border p-2 text-sm">{detail.sub7}</td>
-                <td className="border p-2 text-sm">{detail.sub4}</td>
-                <td className="border p-2 text-sm">{detail.prelp_clicks_ctr}</td>
-                <td className="border p-2 text-sm">{detail.cost}</td>
-                <td className="border p-2 text-sm">{detail.total_revenue}</td>
-                <td className="border p-2 text-sm">{detail.profit}</td>
-                <td className="border p-2 text-sm">{detail.convtype2}</td>
-                <td className="border p-2 text-sm">{detail.convtype1}</td>
-                <td className="border p-2 text-sm">{detail.type1_cpa}</td>
-                <td className="border p-2 text-sm">{detail.lp_clicks}</td>
-                <td className="border p-2 text-sm">{detail.convtype3}</td>
-                <td className="border p-2 text-sm">{detail.clicks}</td>
-                <td className="border p-2 text-sm">{detail.epc}</td>
-                <td className="border p-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={statusMap[detail.sub7] ?? true}
-                    onChange={() => toggleStatus(detail.sub7)}
-                  />
-                </td>
-              </tr>
-            ))}
+            {detailData.map((detail) => {
+              const profit = detail.profit;
+              const rowColor = profit < -60 ? redRow : greenRow;
+              return (
+                <tr key={detail.sub7} className="border-b" style={{ backgroundColor: rowColor }}>
+                  <td className="border p-2 text-sm">{detail.sub7}</td>
+                  <td className="border p-2 text-sm">{detail.sub4}</td>
+                  <td className="border p-2 text-sm">{detail.prelp_clicks_ctr}%</td>
+                  <td className="border p-2 text-sm">$ {detail.cost}</td>
+                  <td className="border p-2 text-sm">$ {detail.total_revenue}</td>
+                  <td className="border p-2 text-sm">$ {detail.profit}</td>
+                  <td className="border p-2 text-sm">{detail.convtype2}</td>
+                  <td className="border p-2 text-sm">{detail.convtype1}</td>
+                  <td className="border p-2 text-sm">$ {detail.type1_cpa}</td>
+                  <td className="border p-2 text-sm">{detail.lp_clicks}</td>
+                  <td className="border p-2 text-sm">{detail.convtype3}</td>
+                  <td className="border p-2 text-sm">{detail.clicks}</td>
+                  <td className="border p-2 text-sm">{detail.epc}</td>
+                  <td className="border p-2 text-sm">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" value="" className="sr-only peer" checked={statusMap[detail.sub7] ?? true} onChange={() => toggleStatus(detail.sub7)} />
+                      <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                      <span className="ms-3 text-sm font-medium">{statusMap[detail.sub7]? 'Ativo' : 'Inativo'}</span>
+                    </label>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
