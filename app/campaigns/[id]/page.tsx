@@ -35,18 +35,20 @@ const DetailTable: React.FC = () => {
   const [statusMap, setStatusMap] = useState<{ [sub7: number]: boolean }>({});
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [sortBy, setSortBy] = useState<string>("profit");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const params = useParams();
   const campaignId = params.id as string;
   const dateFrom = startDate.toISOString().split('T')[0];
   const dateTo = endDate.toISOString().split('T')[0];
-  const redRow = "#d59e91";
-  const greenRow = "#d5ecc5";
+  const redRow = "#ffebee";
+  const greenRow = "#c8e6c9";
 
   const fetchDetails = async () => {
     const apiKey = process.env.NEXT_PUBLIC_REDTRACK_API_KEY;
 
-    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=asc&group=sub7,sub4&sortby=profit&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
+    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${sortDirection}&group=sub7,sub4&sortby=${sortBy}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
 
     const response = await axios.get(detailUrl);
     const data = response.data.items;
@@ -65,9 +67,19 @@ const DetailTable: React.FC = () => {
     setStatusMap(map);
   };
 
+  const handleSort = (field: string) => {
+    setDetailData([]);
+    if (field === sortBy) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortDirection("asc");
+    }
+  };
+
   useEffect(() => {
     fetchDetails();
-  }, [campaignId]);
+  }, [campaignId, sortBy, sortDirection]);
 
   const toggleStatus = (sub7: number) => {
     const updated = { ...statusMap };
@@ -122,43 +134,55 @@ const DetailTable: React.FC = () => {
                 "Sub7", "Sub4", "Pre-LP Click CTR", "Cost", "Total Revenue", "Profit",
                 "InitiateCheckout", "Purchase", "Purchase CPA", "LP Clicks", "Upsell", "Clicks", "EPC", "Status"
               ].map((header) => (
-                <th key={header} className="border p-2 text-sm text-left">{header}</th>
+                <th key={header} className="border p-2 text-sm text-left">
+                  {["Cost", "Total Revenue", "Profit", "Purchase", "Clicks"].includes(header) ? (
+                    <button
+                      onClick={() => handleSort(header.toLowerCase().replace(" ", "_"))}
+                      className="flex items-center gap-1 hover:bg-gray-200 px-2 py-1 rounded"
+                    >
+                      {header}
+                      <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                    </button>
+                  ) : (
+                    header
+                  )}
+                </th>
               ))}
             </tr>
             <tr>
               <th colSpan={2} className="border p-2 text-sm text-left">Total</th>
-              <th className="border p-2 text-sm text-left">{totalData.prelp_clicks_ctr*100}%</th>
-              <th className="border p-2 text-sm text-left">$ {totalData.cost}</th>
-              <th className="border p-2 text-sm text-left">$ {totalData.total_revenue}</th>
-              <th className="border p-2 text-sm text-left">$ {totalData.profit}</th>
+              <th className="border p-2 text-sm text-left">{(totalData?.prelp_clicks_ctr * 100)?.toFixed(2)}%</th>
+              <th className="border p-2 text-sm text-left">$ {totalData?.cost?.toFixed(2) || '0.00'}</th>
+              <th className="border p-2 text-sm text-left">$ {totalData?.total_revenue?.toFixed(2) || '0.00'}</th>
+              <th className="border p-2 text-sm text-left">$ {totalData?.profit?.toFixed(2) || '0.00'}</th>
               <th className="border p-2 text-sm text-left">{totalData.convtype2}</th>
               <th className="border p-2 text-sm text-left">{totalData.convtype1}</th>
-              <th className="border p-2 text-sm text-left">$ {totalData.type1_cpa}</th>
+              <th className="border p-2 text-sm text-left">$ {totalData?.type1_cpa?.toFixed(2) || '0.00'}</th>
               <th className="border p-2 text-sm text-left">{totalData.lp_clicks}</th>
               <th className="border p-2 text-sm text-left">{totalData.convtype3}</th>
               <th className="border p-2 text-sm text-left">{totalData.clicks}</th>
-              <th colSpan={2} className="border p-2 text-sm text-left">$ {totalData.epc}</th>
+              <th colSpan={2} className="border p-2 text-sm text-left">$ {totalData?.epc?.toFixed(2) || '0.00'}</th>
             </tr>
           </thead>
           <tbody>
             {detailData.map((detail) => {
               const profit = detail.profit;
-              const rowColor = profit < -60 ? redRow : greenRow;
+              const rowColor = profit < -1 ? redRow : profit > 60 ? greenRow : "";
               return (
                 <tr key={detail.sub7} className="border-b" style={{ backgroundColor: rowColor }}>
                   <td className="border p-2 text-sm">{detail.sub7}</td>
                   <td className="border p-2 text-sm">{detail.sub4}</td>
                   <td className="border p-2 text-sm">{detail.prelp_clicks_ctr}%</td>
-                  <td className="border p-2 text-sm">$ {detail.cost}</td>
-                  <td className="border p-2 text-sm">$ {detail.total_revenue}</td>
-                  <td className="border p-2 text-sm">$ {detail.profit}</td>
+                  <td className="border p-2 text-sm">$ {detail?.cost?.toFixed(2) || '0.00'}</td>
+                  <td className="border p-2 text-sm">$ {detail?.total_revenue?.toFixed(2) || '0.00'}</td>
+                  <td className="border p-2 text-sm">$ {detail?.profit?.toFixed(2) || '0.00'}</td>
                   <td className="border p-2 text-sm">{detail.convtype2}</td>
                   <td className="border p-2 text-sm">{detail.convtype1}</td>
-                  <td className="border p-2 text-sm">$ {detail.type1_cpa}</td>
+                  <td className="border p-2 text-sm">$ {detail?.type1_cpa?.toFixed(2) || '0.00'}</td>
                   <td className="border p-2 text-sm">{detail.lp_clicks}</td>
                   <td className="border p-2 text-sm">{detail.convtype3}</td>
                   <td className="border p-2 text-sm">{detail.clicks}</td>
-                  <td className="border p-2 text-sm">{detail.epc}</td>
+                  <td className="border p-2 text-sm">{detail?.epc?.toFixed(2) || '0.00'}</td>
                   <td className="border p-2 text-sm">
                     <label className="inline-flex items-center cursor-pointer">
                       <input type="checkbox" value="" className="sr-only peer" checked={statusMap[detail.sub7] ?? true} onChange={() => toggleStatus(detail.sub7)} />
