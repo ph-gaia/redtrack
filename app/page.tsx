@@ -36,8 +36,8 @@ export default function HomePage() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
-  const redRow = "#d59e91";
-  const greenRow = "#d5ecc5";
+  const redRow = "#ffebee";
+  const greenRow = "#c8e6c9";
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('redtrack_api_key');

@@ -28,7 +28,7 @@ interface Detail {
 interface StatusRecord {
   [apiKey: string]: {
     [campaignId: string]: {
-      [sub7: number]: 1 | 0;
+      [key: string]: 1 | 0;
     };
   };
 }
@@ -38,7 +38,7 @@ type GroupType = "SITE - REV" | "NAME + ID";
 const DetailTable: React.FC = () => {
   const [detailData, setDetailData] = useState<Detail[]>([]);
   const [totalData, setTotalData] = useState<Detail>({} as Detail);
-  const [statusMap, setStatusMap] = useState<{ [sub7: number]: boolean }>({});
+  const [statusMap, setStatusMap] = useState<{ [key: string]: boolean }>({});
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [sortBy, setSortBy] = useState<string>("profit");
@@ -67,6 +67,7 @@ const DetailTable: React.FC = () => {
     if (!apiKey) return;
 
     setDetailData([]);
+    setTotalData({} as Detail);
     const groupParam = groupType === "SITE - REV" ? "sub1" : "sub4,sub7";
     const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${sortDirection}&group=${groupParam}&sortby=${sortBy}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
 
@@ -80,10 +81,11 @@ const DetailTable: React.FC = () => {
       const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
       const currentApiKey = local[apiKey] || {};
       const currentCampaign = currentApiKey[campaignId] || {};
-      const map: { [sub7: number]: boolean } = {};
+      const map: { [key: string]: boolean } = {};
 
       data.forEach((d: Detail) => {
-        map[d.sub7] = currentCampaign[d.sub7] !== 0;
+        const key = groupType === "SITE - REV" ? d.sub1 : d.sub7.toString();
+        map[key] = currentCampaign[key] !== 0;
       });
 
       setStatusMap(map);
@@ -111,15 +113,15 @@ const DetailTable: React.FC = () => {
     }
   };
 
-  const toggleStatus = (sub7: number) => {
+  const toggleStatus = (key: string) => {
     const updated = { ...statusMap };
-    updated[sub7] = !statusMap[sub7];
+    updated[key] = !statusMap[key];
     setStatusMap(updated);
 
     const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
     if (!local[apiKey]) local[apiKey] = {};
     if (!local[apiKey][campaignId]) local[apiKey][campaignId] = {};
-    local[apiKey][campaignId][sub7] = updated[sub7] ? 1 : 0;
+    local[apiKey][campaignId][key] = updated[key] ? 1 : 0;
     localStorage.setItem("siteStatus", JSON.stringify(local));
   };
 
@@ -228,6 +230,7 @@ const DetailTable: React.FC = () => {
               {detailData.map((detail) => {
                 const profit = detail.profit;
                 const rowColor = profit < -1 ? redRow : profit > 60 ? greenRow : "";
+                const statusKey = groupType === "SITE - REV" ? detail.sub1 : detail.sub7.toString();
                 return (
                   <tr key={detail.sub7} className="border-b" style={{ backgroundColor: rowColor }}>
                     {groupType === "SITE - REV" ? (
@@ -251,9 +254,15 @@ const DetailTable: React.FC = () => {
                     <td className="border p-2 text-sm">{detail?.epc?.toFixed(2) || '0.00'}</td>
                     <td className="border p-2 text-sm">
                       <label className="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" value="" className="sr-only peer" checked={statusMap[detail.sub7] ?? true} onChange={() => toggleStatus(detail.sub7)} />
+                        <input 
+                          type="checkbox" 
+                          value="" 
+                          className="sr-only peer" 
+                          checked={statusMap[statusKey] ?? true} 
+                          onChange={() => toggleStatus(statusKey)} 
+                        />
                         <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
-                        <span className="ms-3 text-sm font-medium">{statusMap[detail.sub7]? 'Ativo' : 'Inativo'}</span>
+                        <span className="ms-3 text-sm font-medium">{statusMap[statusKey]? 'Ativo' : 'Inativo'}</span>
                       </label>
                     </td>
                   </tr>
