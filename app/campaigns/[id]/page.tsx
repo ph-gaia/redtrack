@@ -33,6 +33,8 @@ interface StatusRecord {
   };
 }
 
+type GroupType = "SITE - REV" | "NAME + ID";
+
 const DetailTable: React.FC = () => {
   const [detailData, setDetailData] = useState<Detail[]>([]);
   const [totalData, setTotalData] = useState<Detail>({} as Detail);
@@ -42,6 +44,7 @@ const DetailTable: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>("profit");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [apiKey, setApiKey] = useState<string>("");
+  const [groupType, setGroupType] = useState<GroupType>("NAME + ID");
 
   const params = useParams();
   const router = useRouter();
@@ -64,7 +67,8 @@ const DetailTable: React.FC = () => {
     if (!apiKey) return;
 
     setDetailData([]);
-    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${sortDirection}&group=sub1,sub7,sub4&sortby=${sortBy}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
+    const groupParam = groupType === "SITE - REV" ? "sub1" : "sub4,sub7";
+    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${sortDirection}&group=${groupParam}&sortby=${sortBy}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
 
     try {
       const response = await axios.get(detailUrl);
@@ -123,6 +127,19 @@ const DetailTable: React.FC = () => {
     return null;
   }
 
+  const getTableHeaders = () => {
+    const baseHeaders = [
+      "Pre-LP Click CTR", "Cost", "Total Revenue", "Profit",
+      "InitiateCheckout", "Purchase", "Purchase CPA", "LP Clicks", "Upsell", "Clicks", "EPC", "Status"
+    ];
+
+    if (groupType === "SITE - REV") {
+      return ["Sub1", ...baseHeaders];
+    } else {
+      return ["Sub7", "Sub4", ...baseHeaders];
+    }
+  };
+
   return (
     <>
       <TopBar />
@@ -149,8 +166,24 @@ const DetailTable: React.FC = () => {
             />
           </div>
           <div>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={() => fetchDetails()}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Template:</label>
+            <select
+              value={groupType}
+              onChange={(e) => setGroupType(e.target.value as GroupType)}
+              className="border rounded px-3 py-2"
+            >
+              <option value="NAME + ID">NAME + ID</option>
+              <option value="SITE - REV">SITE - REV</option>
+            </select>
+          </div>
+          <div>
+            <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={fetchDetails}>
               Aplicar
+            </button>
+          </div>
+          <div className="ml-auto">
+            <button className="bg-yellow-500 text-white px-4 py-2" onClick={() => window.location.href = '/'}>
+              Voltar
             </button>
           </div>
         </div>
@@ -158,10 +191,7 @@ const DetailTable: React.FC = () => {
           <table className="min-w-full table-auto border-collapse border border-gray-300">
             <thead className="bg-gray-100">
               <tr>
-                {[
-                  "Sub1", "Sub7", "Sub4", "Pre-LP Click CTR", "Cost", "Total Revenue", "Profit",
-                  "InitiateCheckout", "Purchase", "Purchase CPA", "LP Clicks", "Upsell", "Clicks", "EPC", "Status"
-                ].map((header) => (
+                {getTableHeaders().map((header) => (
                   <th key={header} className="border p-2 text-sm text-left">
                     {["Cost", "Total Revenue", "Profit", "Purchase", "Clicks"].includes(header) ? (
                       <button
@@ -169,7 +199,9 @@ const DetailTable: React.FC = () => {
                         className="flex items-center gap-1 hover:bg-gray-200 px-2 py-1 rounded"
                       >
                         {header}
-                        <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                        {sortBy === header.toLowerCase().replace(" ", "_") && (
+                          <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                        )}
                       </button>
                     ) : (
                       header
@@ -178,7 +210,7 @@ const DetailTable: React.FC = () => {
                 ))}
               </tr>
               <tr>
-                <th colSpan={3} className="border p-2 text-sm text-left">Total</th>
+                <th colSpan={groupType === "SITE - REV" ? 1 : 2} className="border p-2 text-sm text-left">Total</th>
                 <th className="border p-2 text-sm text-left">{(totalData?.prelp_clicks_ctr * 100)?.toFixed(2)}%</th>
                 <th className="border p-2 text-sm text-left">$ {totalData?.cost?.toFixed(2) || '0.00'}</th>
                 <th className="border p-2 text-sm text-left">$ {totalData?.total_revenue?.toFixed(2) || '0.00'}</th>
@@ -198,9 +230,14 @@ const DetailTable: React.FC = () => {
                 const rowColor = profit < -1 ? redRow : profit > 60 ? greenRow : "";
                 return (
                   <tr key={detail.sub7} className="border-b" style={{ backgroundColor: rowColor }}>
-                    <td className="border p-2 text-sm">{detail.sub1}</td>
-                    <td className="border p-2 text-sm">{detail.sub7}</td>
-                    <td className="border p-2 text-sm">{detail.sub4}</td>
+                    {groupType === "SITE - REV" ? (
+                      <td className="border p-2 text-sm">{detail.sub1}</td>
+                    ) : (
+                      <>
+                        <td className="border p-2 text-sm">{detail.sub7}</td>
+                        <td className="border p-2 text-sm">{detail.sub4}</td>
+                      </>
+                    )}
                     <td className="border p-2 text-sm">{detail?.prelp_clicks_ctr?.toFixed(2) || '0.00'}%</td>
                     <td className="border p-2 text-sm">$ {detail?.cost?.toFixed(2) || '0.00'}</td>
                     <td className="border p-2 text-sm">$ {detail?.total_revenue?.toFixed(2) || '0.00'}</td>
