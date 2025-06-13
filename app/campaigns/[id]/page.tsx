@@ -51,8 +51,10 @@ const DetailTable: React.FC = () => {
   const campaignId = params.id as string;
   const dateFrom = startDate.toISOString().split('T')[0];
   const dateTo = endDate.toISOString().split('T')[0];
-  const redRow = "#ffebee";
-  const greenRow = "#c8e6c9";
+  const lightPinkRow = "#f0ced3";
+  const pinkRow = "#f79cab";
+  const redRow = "#ea5369";
+  const greenRow = "#e0eae0";
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('redtrack_api_key');
@@ -191,7 +193,7 @@ const DetailTable: React.FC = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full table-auto border-collapse border border-gray-300">
-            <thead className="bg-gray-100">
+            <thead className="bg-gray-100 top-0 z-10">
               <tr>
                 {getTableHeaders().map((header) => (
                   <th key={header} className="border p-2 text-sm text-left">
@@ -229,7 +231,7 @@ const DetailTable: React.FC = () => {
             <tbody>
               {detailData.map((detail) => {
                 const profit = detail.profit;
-                const rowColor = profit < -1 ? redRow : profit > 60 ? greenRow : "";
+                const rowColor = profit <= -60 ? redRow : profit <= -20 ? pinkRow : profit <= -5 ? lightPinkRow : greenRow;
                 const statusKey = groupType === "SITE - REV" ? detail.sub1 : detail.sub7.toString();
                 return (
                   <tr key={detail.sub7} className="border-b" style={{ backgroundColor: rowColor }}>
@@ -241,7 +243,7 @@ const DetailTable: React.FC = () => {
                         <td className="border p-2 text-sm">{detail.sub4}</td>
                       </>
                     )}
-                    <td className="border p-2 text-sm">{detail?.prelp_clicks_ctr?.toFixed(2) || '0.00'}%</td>
+                    <td className="border p-2 text-sm">{(detail?.prelp_clicks_ctr * 100)?.toFixed(2) || '0.00'}%</td>
                     <td className="border p-2 text-sm">$ {detail?.cost?.toFixed(2) || '0.00'}</td>
                     <td className="border p-2 text-sm">$ {detail?.total_revenue?.toFixed(2) || '0.00'}</td>
                     <td className="border p-2 text-sm">$ {detail?.profit?.toFixed(2) || '0.00'}</td>

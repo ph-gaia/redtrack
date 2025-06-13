@@ -36,7 +36,9 @@ export default function HomePage() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
-  const redRow = "#ffebee";
+  const lightPinkRow = "#f0ced3";
+  const pinkRow = "#f79cab";
+  const redRow = "#ea5369";
   const greenRow = "#c8e6c9";
 
   useEffect(() => {
@@ -137,23 +139,23 @@ export default function HomePage() {
             <tbody>
               {data.map((item) => {
                 const profit = item.stat.profit;
-                const rowColor = profit < -60 ? redRow : greenRow;
+                const rowColor = profit <= -60 ? redRow : profit <= -20 ? pinkRow : profit <= -5 ? lightPinkRow : greenRow;
                 return (
-                  <tr key={item.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600" style={{ backgroundColor: rowColor }}>
+                  <tr key={item.id} className="bg-white border-b" style={{ backgroundColor: rowColor }}>
                     <td className="px-4 py-2">{item.title}</td>
-                    <td className="px-4 py-2">{item.stat.cost}</td>
-                    <td className="px-4 py-2">{item.stat.total_revenue}</td>
-                    <td className="px-4 py-2">{profit}</td>
+                    <td className="px-4 py-2">{item.stat.cost?.toFixed(2) || '0.00'}</td>
+                    <td className="px-4 py-2">{item.stat.total_revenue?.toFixed(2) || '0.00'}</td>
+                    <td className="px-4 py-2">{profit?.toFixed(2) || '0.00'}</td>
                     <td className="px-4 py-2">{item.stat.convtype2}</td>
                     <td className="px-4 py-2">{item.stat.convtype1}</td>
-                    <td className="px-4 py-2">{item.stat.type1_cpa}</td>
-                    <td className="px-4 py-2">{item.stat.type1_cr}</td>
-                    <td className="px-4 py-2">{item.stat.type1_roi}</td>
+                    <td className="px-4 py-2">{item.stat.type1_cpa?.toFixed(2) || '0.00'}</td>
+                    <td className="px-4 py-2">{item.stat.type1_cr?.toFixed(2) || '0.00'}</td>
+                    <td className="px-4 py-2">{item.stat.type1_roi?.toFixed(2) || '0.00'}</td>
                     <td className="px-4 py-2">{item.stat.convtype3}</td>
                     <td className="px-4 py-2">{item.stat.clicks}</td>
-                    <td className="px-4 py-2">{item.stat.epc}</td>
+                    <td className="px-4 py-2">{item.stat.epc?.toFixed(2) || '0.00'}</td>
                     <td className="px-4 py-2">{item.stat.prelp_clicks}</td>
-                    <td className="px-4 py-2">{item.stat.prelp_clicks_ctr}</td>
+                    <td className="px-4 py-2">{item.stat.prelp_clicks_ctr?.toFixed(2) || '0.00'}</td>
                     <td className="px-4 py-2">{item.stat.lp_views}</td>
                     <td className="px-4 py-2">{item.stat.lp_clicks}</td>
                     <td className="px-4 py-2">
