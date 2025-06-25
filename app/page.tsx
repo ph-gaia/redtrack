@@ -88,8 +88,8 @@ export default function HomePage() {
     } catch (error) {
       console.error('Error fetching data:', error);
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 500)) {
-        await FirebaseService.deleteApiKey();
-        setShowApiKeyModal(true);
+        // await FirebaseService.deleteApiKey();
+        // setShowApiKeyModal(true);
       }
     }
   };
