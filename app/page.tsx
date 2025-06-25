@@ -7,6 +7,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import ApiKeyModal from "./components/ApiKeyModal";
 import TopBar from "./components/TopBar";
+import { FirebaseService } from "./lib/firebaseService";
 
 interface Campaign {
   id: number;
@@ -36,24 +37,42 @@ export default function HomePage() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
   const lightPinkRow = "#f0ced3";
   const pinkRow = "#f79cab";
   const redRow = "#ea5369";
   const greenRow = "#c8e6c9";
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem('redtrack_api_key');
-    if (!storedApiKey) {
-      setShowApiKeyModal(true);
-    } else {
-      setApiKey(storedApiKey);
-    }
+    const checkApiKey = async () => {
+      try {
+        const storedApiKey = await FirebaseService.getApiKey();
+        if (!storedApiKey) {
+          setShowApiKeyModal(true);
+        } else {
+          setApiKey(storedApiKey);
+        }
+      } catch (error) {
+        console.error('Error checking API key:', error);
+        setShowApiKeyModal(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkApiKey();
   }, []);
 
-  const handleApiKeySave = (key: string) => {
-    localStorage.setItem('redtrack_api_key', key);
-    setApiKey(key);
-    setShowApiKeyModal(false);
+  const handleApiKeySave = async (key: string) => {
+    try {
+      await FirebaseService.saveApiKey(key);
+      setApiKey(key);
+      setShowApiKeyModal(false);
+    } catch (error) {
+      console.error('Error saving API key:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error saving API key. Please try again.';
+      alert(errorMessage);
+    }
   };
 
   const fetchData = async (from: Date, to: Date) => {
@@ -61,7 +80,7 @@ export default function HomePage() {
 
     const dateFrom = from.toISOString().split('T')[0];
     const dateTo = to.toISOString().split('T')[0];
-    const url = `https://app.redtrack.io/api/campaigns?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&status=1&with_clicks=false&page=1&per=100&sortby=clicks&direction=desc&timezone=America%2FNew_York&total=true`;
+    const url = `/api/campaigns?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}`;
 
     try {
       const res = await axios.get(url);
@@ -69,7 +88,7 @@ export default function HomePage() {
     } catch (error) {
       console.error('Error fetching data:', error);
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 500)) {
-        localStorage.removeItem('redtrack_api_key');
+        await FirebaseService.deleteApiKey();
         setShowApiKeyModal(true);
       }
     }
@@ -80,6 +99,10 @@ export default function HomePage() {
       fetchData(startDate, endDate);
     }
   }, [startDate, endDate, apiKey]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   if (showApiKeyModal) {
     return <ApiKeyModal onSave={handleApiKeySave} />;

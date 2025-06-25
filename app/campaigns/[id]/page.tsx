@@ -6,6 +6,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import TopBar from "../../components/TopBar";
+import { FirebaseService } from "../../lib/firebaseService";
 
 interface Detail {
   date: string;
@@ -25,14 +26,6 @@ interface Detail {
   epc: number;
 }
 
-interface StatusRecord {
-  [apiKey: string]: {
-    [campaignId: string]: {
-      [key: string]: 1 | 0;
-    };
-  };
-}
-
 type GroupType = "SITE - REV" | "NAME + ID";
 
 const DetailTable: React.FC = () => {
@@ -45,6 +38,7 @@ const DetailTable: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [apiKey, setApiKey] = useState<string>("");
   const [groupType, setGroupType] = useState<GroupType>("NAME + ID");
+  const [isLoading, setIsLoading] = useState(true);
 
   const params = useParams();
   const router = useRouter();
@@ -57,21 +51,31 @@ const DetailTable: React.FC = () => {
   const greenRow = "#e0eae0";
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem('redtrack_api_key');
-    if (!storedApiKey) {
-      router.push('/');
-    } else {
-      setApiKey(storedApiKey);
-    }
+    const checkApiKey = async () => {
+      try {
+        const storedApiKey = await FirebaseService.getApiKey();
+        if (!storedApiKey) {
+          router.push('/');
+        } else {
+          setApiKey(storedApiKey);
+        }
+      } catch (error) {
+        console.error('Error checking API key:', error);
+        router.push('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkApiKey();
   }, [router]);
 
   const fetchDetails = async () => {
     if (!apiKey) return;
 
     setDetailData([]);
-    setTotalData({} as Detail);
     const groupParam = groupType === "SITE - REV" ? "sub1" : "sub4,sub7";
-    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${sortDirection}&group=${groupParam}&sortby=${sortBy}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
+    const detailUrl = `/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&direction=${sortDirection}&group=${groupParam}&sortby=${sortBy}&campaign_id=${campaignId}`;
 
     try {
       const response = await axios.get(detailUrl);
@@ -79,10 +83,9 @@ const DetailTable: React.FC = () => {
       setTotalData(response.data.total);
       setDetailData(data);
 
-      // Load localStorage
-      const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
-      const currentApiKey = local[apiKey] || {};
-      const currentCampaign = currentApiKey[campaignId] || {};
+      // Load Firebase data
+      const siteStatus = await FirebaseService.getSiteStatus();
+      const currentCampaign = siteStatus[campaignId] || {};
       const map: { [key: string]: boolean } = {};
 
       data.forEach((d: Detail) => {
@@ -93,17 +96,11 @@ const DetailTable: React.FC = () => {
       setStatusMap(map);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        localStorage.removeItem('redtrack_api_key');
+        await FirebaseService.deleteApiKey();
         router.push('/');
       }
     }
   };
-
-  useEffect(() => {
-    if (apiKey) {
-      fetchDetails();
-    }
-  }, [campaignId, sortBy, sortDirection, apiKey]);
 
   const handleSort = (field: string) => {
     setDetailData([]);
@@ -115,17 +112,23 @@ const DetailTable: React.FC = () => {
     }
   };
 
-  const toggleStatus = (key: string) => {
+  const toggleStatus = async (key: string) => {
     const updated = { ...statusMap };
     updated[key] = !statusMap[key];
     setStatusMap(updated);
 
-    const local: StatusRecord = JSON.parse(localStorage.getItem("siteStatus") || "{}");
-    if (!local[apiKey]) local[apiKey] = {};
-    if (!local[apiKey][campaignId]) local[apiKey][campaignId] = {};
-    local[apiKey][campaignId][key] = updated[key] ? 1 : 0;
-    localStorage.setItem("siteStatus", JSON.stringify(local));
+    try {
+      await FirebaseService.updateSiteStatus(campaignId, key, updated[key] ? 1 : 0);
+    } catch (error) {
+      console.error('Error updating site status:', error);
+      // Revert the change if there was an error
+      setStatusMap({ ...statusMap });
+    }
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   if (!apiKey) {
     return null;
@@ -170,7 +173,7 @@ const DetailTable: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Template:</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Group By:</label>
             <select
               value={groupType}
               onChange={(e) => setGroupType(e.target.value as GroupType)}
@@ -183,11 +186,6 @@ const DetailTable: React.FC = () => {
           <div>
             <button className="bg-blue-500 text-white px-4 py-2 rounded" onClick={fetchDetails}>
               Aplicar
-            </button>
-          </div>
-          <div className="ml-auto">
-            <button className="bg-yellow-500 text-white px-4 py-2" onClick={() => window.location.href = '/'}>
-              Voltar
             </button>
           </div>
         </div>

@@ -1,12 +1,18 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { FirebaseService } from '../lib/firebaseService';
 
 const TopBar: React.FC = () => {
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem('redtrack_api_key');
-    router.push('/');
+  const handleLogout = async () => {
+    try {
+      await FirebaseService.deleteApiKey();
+      router.push('/');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      router.push('/');
+    }
   };
 
   return (
