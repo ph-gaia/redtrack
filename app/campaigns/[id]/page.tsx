@@ -188,6 +188,11 @@ const DetailTable: React.FC = () => {
               Aplicar
             </button>
           </div>
+          <div className="ml-auto">
+            <button className="bg-yellow-500 text-white px-4 py-2" onClick={() => window.location.href = '/'}>
+              Voltar
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full table-auto border-collapse border border-gray-300">
