@@ -75,7 +75,7 @@ const DetailTable: React.FC = () => {
 
     setDetailData([]);
     const groupParam = groupType === "SITE - REV" ? "sub1" : "sub4,sub7";
-    const detailUrl = `/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&direction=${sortDirection}&group=${groupParam}&sortby=${sortBy}&campaign_id=${campaignId}`;
+    const detailUrl = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${sortDirection}&group=${groupParam}&sortby=${sortBy}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
 
     try {
       const response = await axios.get(detailUrl);

@@ -80,7 +80,7 @@ export default function HomePage() {
 
     const dateFrom = from.toISOString().split('T')[0];
     const dateTo = to.toISOString().split('T')[0];
-    const url = `/api/campaigns?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}`;
+    const url = `https://app.redtrack.io/api/campaigns?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&status=1&with_clicks=false&page=1&per=100&sortby=clicks&direction=desc&timezone=America%2FNew_York&total=true`;
 
     try {
       const res = await axios.get(url);
