@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = `https://app.redtrack.io/api/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${direction}&group=${group}&sortby=${sortby}&total=true&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
+    const url = `https://api.redtrack.io/report?api_key=${apiKey}&date_from=${dateFrom}&date_to=${dateTo}&timezone=America/New_York&direction=${direction}&group=${group}&sortby=${sortby}&total=true&page=1&per=1000&table_settings_name=table_campaigns_report&campaign_id=${campaignId}`;
     
     const response = await fetch(url);
     const data = await response.json();
